@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+coverage/
+*.tsbuildinfo
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Runtime & local databases
+**/.embedded-pg/
+**/uploads/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Testing
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Personal / local artifacts
+*.pptx

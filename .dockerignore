@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+**/.embedded-pg
+**/uploads
+**/coverage
+.git
+.gitignore
+*.log
+.DS_Store
+apps/api/.env
+apps/web/.env
+docs
+agent-transcripts

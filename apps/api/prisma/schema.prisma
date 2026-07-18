@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+  SAVED
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  SEEN
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  VOICE
+}
+
+model User {
+  id            String               @id @default(uuid()) @db.Uuid
+  email         String               @unique
+  username      String               @unique
+  password      String
+  displayName   String               @map("display_name")
+  bio           String?              @db.VarChar(70)
+  avatarUrl     String?              @map("avatar_url")
+  lastSeenAt    DateTime?            @map("last_seen_at")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+  refreshTokens RefreshToken[]
+  memberships   ConversationMember[]
+  messages      Message[]            @relation("MessageSender")
+  reactions     MessageReaction[]
+  drafts        Draft[]
+  preference    UserPreference?
+  privacy       PrivacySetting[]
+  blocksOwned   UserBlock[]          @relation("BlockOwner")
+  blockedBy     UserBlock[]          @relation("BlockPeer")
+
+  @@map("users")
+}
+
+model UserPreference {
+  userId               String   @id @map("user_id") @db.Uuid
+  theme                String   @default("system")
+  language             String   @default("en")
+  sendOnEnter          Boolean  @default(true) @map("send_on_enter")
+  messagePreview       Boolean  @default(true) @map("message_preview")
+  desktopNotifications Boolean  @default(true) @map("desktop_notifications")
+  soundEnabled         Boolean  @default(true) @map("sound_enabled")
+  animationLevel       String   @default("full") @map("animation_level")
+  autoDownloadPhotos   Boolean  @default(true) @map("auto_download_photos")
+  autoDownloadVideos   Boolean  @default(false) @map("auto_download_videos")
+  autoDownloadFiles    Boolean  @default(false) @map("auto_download_files")
+  saveToGallery        Boolean  @default(false) @map("save_to_gallery")
+  fontSize             Int      @default(16) @map("font_size")
+  chatBackground       String?  @map("chat_background")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model PrivacySetting {
+  userId     String @map("user_id") @db.Uuid
+  field      String
+  visibility String @default("EVERYONE")
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, field])
+  @@map("privacy_settings")
+}
+
+model UserBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  blockedId String   @map("blocked_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  owner     User     @relation("BlockOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("BlockPeer", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, blockedId])
+  @@index([ownerId])
+  @@map("user_blocks")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  userId       String    @map("user_id") @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  revokedAt    DateTime? @map("revoked_at")
+  deviceId     String?   @map("device_id")
+  deviceName   String?   @map("device_name")
+  platform     String?
+  ip           String?
+  userAgent    String?   @map("user_agent")
+  lastActiveAt DateTime  @default(now()) @map("last_active_at")
+
+  @@index([userId])
+  @@index([userId, revokedAt])
+  @@map("refresh_tokens")
+}
+
+model Conversation {
+  id            String               @id @default(uuid()) @db.Uuid
+  type          ConversationType     @default(DIRECT)
+  title         String?
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+  lastMessageAt DateTime?            @map("last_message_at")
+  members       ConversationMember[]
+  messages      Message[]
+  drafts        Draft[]
+
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String       @id @default(uuid()) @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  joinedAt       DateTime     @default(now()) @map("joined_at")
+  lastReadAt     DateTime?    @map("last_read_at")
+  isArchived     Boolean      @default(false) @map("is_archived")
+  isPinned       Boolean      @default(false) @map("is_pinned")
+  pinOrder       Int?         @map("pin_order")
+  mutedUntil     DateTime?    @map("muted_until")
+  markedUnread   Boolean      @default(false) @map("marked_unread")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([userId, isArchived])
+  @@index([userId, isPinned])
+  @@map("conversation_members")
+}
+
+model Draft {
+  userId         String       @map("user_id") @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  content        String       @default("")
+  replyToId      String?      @map("reply_to_id") @db.Uuid
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+  @@map("drafts")
+}
+
+model Message {
+  id              String        @id @default(uuid()) @db.Uuid
+  conversationId  String        @map("conversation_id") @db.Uuid
+  senderId        String        @map("sender_id") @db.Uuid
+  type            MessageType   @default(TEXT)
+  content         String        @default("")
+  status          MessageStatus @default(SENT)
+  isPinned        Boolean       @default(false) @map("is_pinned")
+  replyToId       String?       @map("reply_to_id") @db.Uuid
+  forwardedFromId String?       @map("forwarded_from_id") @db.Uuid
+  fileUrl         String?       @map("file_url")
+  fileName        String?       @map("file_name")
+  fileSize        Int?          @map("file_size")
+  mimeType        String?       @map("mime_type")
+  durationMs      Int?          @map("duration_ms")
+  editedAt        DateTime?     @map("edited_at")
+  deletedAt       DateTime?     @map("deleted_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo         Message?      @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies         Message[]     @relation("MessageReplies")
+  forwardedFrom   Message?      @relation("MessageForwards", fields: [forwardedFromId], references: [id], onDelete: SetNull)
+  forwards        Message[]     @relation("MessageForwards")
+  reactions       MessageReaction[]
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, isPinned])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@map("message_reactions")
+}

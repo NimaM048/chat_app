@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+**/dist
+**/.embedded-pg
+**/uploads
+**/coverage
+docs
+*.md
+apps/web
+!apps/api

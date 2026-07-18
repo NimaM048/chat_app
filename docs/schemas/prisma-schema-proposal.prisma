@@ -1,0 +1,484 @@
+// Full target Prisma schema proposal for the Telegram-inspired chat app.
+// NOT applied to production yet — evolve from apps/api/prisma/schema.prisma via additive migrations.
+// See docs/telegram-spec/16-database.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+  CHANNEL
+  SAVED
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  RESTRICTED
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  SEEN
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  GIF
+  FILE
+  VOICE
+  AUDIO
+  STICKER
+  VIDEO_NOTE
+  LOCATION
+  LIVE_LOCATION
+  CONTACT
+  POLL
+  SYSTEM
+  CALL
+}
+
+enum PrivacyVisibility {
+  EVERYONE
+  CONTACTS
+  NOBODY
+}
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String?   @unique
+  phoneE164       String?   @unique @map("phone_e164")
+  phoneVerifiedAt DateTime? @map("phone_verified_at")
+  username        String?   @unique
+  password        String?
+  twoFactorHash   String?   @map("two_factor_hash")
+  twoFactorHint   String?   @map("two_factor_hint")
+  recoveryEmail   String?   @map("recovery_email")
+  displayName     String    @map("display_name")
+  bio             String?
+  avatarUrl       String?   @map("avatar_url")
+  birthday        DateTime? @db.Date
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  sessions      Session[]
+  memberships   ConversationMember[]
+  messages      Message[]            @relation("MessageSender")
+  reactions     MessageReaction[]
+  preferences   UserPreference?
+  privacy       PrivacySetting[]
+  privacyExceptions PrivacyException[]
+  contactsOwned Contact[]            @relation("ContactOwner")
+  contactsOf    Contact[]            @relation("ContactPeer")
+  blocksOwned   UserBlock[]          @relation("BlockOwner")
+  blocksOf      UserBlock[]          @relation("BlockPeer")
+  drafts        Draft[]
+  folders       ChatFolder[]
+  pushTokens    DevicePushToken[]
+  pollVotes     PollVote[]
+  bans          GroupBan[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  refreshHash  String    @unique @map("refresh_hash")
+  deviceId     String    @map("device_id")
+  deviceName   String?   @map("device_name")
+  platform     String
+  ip           String?
+  userAgent    String?   @map("user_agent")
+  lastActiveAt DateTime  @map("last_active_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  revokedAt    DateTime? @map("revoked_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model UserPreference {
+  userId                 String  @id @map("user_id") @db.Uuid
+  theme                  String  @default("system")
+  language               String  @default("en")
+  sendOnEnter            Boolean @default(true) @map("send_on_enter")
+  messagePreview         Boolean @default(true) @map("message_preview")
+  animations             String  @default("full")
+  autoDownload           Json?   @map("auto_download")
+  lastOpenConversationId String? @map("last_open_conversation_id") @db.Uuid
+  notificationSettings   Json?   @map("notification_settings")
+  user                   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model PrivacySetting {
+  userId     String             @map("user_id") @db.Uuid
+  field      String
+  visibility PrivacyVisibility  @default(EVERYONE)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, field])
+  @@map("privacy_settings")
+}
+
+model PrivacyException {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  field  String
+  peerId String @map("peer_id") @db.Uuid
+  kind   String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, field])
+  @@map("privacy_exceptions")
+}
+
+model UserBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String   @map("owner_id") @db.Uuid
+  blockedId String   @map("blocked_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  owner     User     @relation("BlockOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("BlockPeer", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, blockedId])
+  @@map("user_blocks")
+}
+
+model Contact {
+  id            String   @id @default(uuid()) @db.Uuid
+  ownerId       String   @map("owner_id") @db.Uuid
+  contactUserId String   @map("contact_user_id") @db.Uuid
+  localName     String?  @map("local_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+  owner         User     @relation("ContactOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  contactUser   User     @relation("ContactPeer", fields: [contactUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, contactUserId])
+  @@map("contacts")
+}
+
+model Conversation {
+  id                 String               @id @default(uuid()) @db.Uuid
+  type               ConversationType     @default(DIRECT)
+  title              String?
+  description        String?
+  username           String?              @unique
+  isPublic           Boolean              @default(false) @map("is_public")
+  avatarUrl          String?              @map("avatar_url")
+  slowModeSeconds    Int                  @default(0) @map("slow_mode_seconds")
+  historyVisible     Boolean              @default(true) @map("history_visible")
+  defaultPermissions Json?                @map("default_permissions")
+  discussionGroupId  String?              @map("discussion_group_id") @db.Uuid
+  subscriberCount    Int                  @default(0) @map("subscriber_count")
+  directPairKey      String?              @unique @map("direct_pair_key")
+  lastMessageAt      DateTime?            @map("last_message_at")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  members            ConversationMember[]
+  messages           Message[]
+  inviteLinks        InviteLink[]
+  topics             Topic[]
+  drafts             Draft[]
+  bans               GroupBan[]
+
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id                String       @id @default(uuid()) @db.Uuid
+  conversationId    String       @map("conversation_id") @db.Uuid
+  userId            String       @map("user_id") @db.Uuid
+  role              MemberRole   @default(MEMBER)
+  adminPermissions  Json?        @map("admin_permissions")
+  permissions       Json?
+  joinedAt          DateTime     @default(now()) @map("joined_at")
+  lastReadAt        DateTime?    @map("last_read_at")
+  isArchived        Boolean      @default(false) @map("is_archived")
+  isPinned          Boolean      @default(false) @map("is_pinned")
+  pinOrder          Int?         @map("pin_order")
+  mutedUntil        DateTime?    @map("muted_until")
+  markedUnread      Boolean      @default(false) @map("marked_unread")
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId, isArchived])
+  @@index([userId, isPinned])
+  @@map("conversation_members")
+}
+
+model Message {
+  id              String        @id @default(uuid()) @db.Uuid
+  conversationId  String        @map("conversation_id") @db.Uuid
+  senderId        String        @map("sender_id") @db.Uuid
+  type            MessageType   @default(TEXT)
+  content         String        @default("")
+  status          MessageStatus @default(SENT)
+  clientMessageId String?       @map("client_message_id")
+  isPinned        Boolean       @default(false) @map("is_pinned")
+  pinnedAt        DateTime?     @map("pinned_at")
+  replyToId       String?       @map("reply_to_id") @db.Uuid
+  forwardedFromId String?       @map("forwarded_from_id") @db.Uuid
+  silent          Boolean       @default(false)
+  scheduledFor    DateTime?     @map("scheduled_for")
+  topicId         String?       @map("topic_id") @db.Uuid
+  albumId         String?       @map("album_id") @db.Uuid
+  albumIndex      Int?          @map("album_index")
+  fileUrl         String?       @map("file_url")
+  fileName        String?       @map("file_name")
+  fileSize        Int?          @map("file_size")
+  mimeType        String?       @map("mime_type")
+  durationMs      Int?          @map("duration_ms")
+  waveform        Json?
+  width           Int?
+  height          Int?
+  thumbnailUrl    String?       @map("thumbnail_url")
+  spoiler         Boolean       @default(false)
+  linkPreview     Json?         @map("link_preview")
+  searchVector    Unsupported("tsvector")? @map("search_vector")
+  editedAt        DateTime?     @map("edited_at")
+  deletedAt       DateTime?     @map("deleted_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  conversation  Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender        User              @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo       Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies       Message[]         @relation("MessageReplies")
+  forwardedFrom Message?          @relation("MessageForwards", fields: [forwardedFromId], references: [id], onDelete: SetNull)
+  forwards      Message[]         @relation("MessageForwards")
+  reactions     MessageReaction[]
+  poll          Poll?
+  topic         Topic?            @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@unique([senderId, clientMessageId])
+  @@index([conversationId, createdAt])
+  @@index([conversationId, isPinned])
+  @@index([senderId])
+  @@index([albumId])
+  @@map("messages")
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@map("message_reactions")
+}
+
+model MessageUserDeletion {
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  deletedAt DateTime @default(now()) @map("deleted_at")
+
+  @@id([messageId, userId])
+  @@map("message_user_deletions")
+}
+
+model Draft {
+  userId         String   @map("user_id") @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  content        String   @default("")
+  replyToId      String?  @map("reply_to_id") @db.Uuid
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+  @@map("drafts")
+}
+
+model ChatFolder {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  emoji     String?
+  order     Int      @default(0)
+  rules     Json
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, order])
+  @@map("chat_folders")
+}
+
+model InviteLink {
+  id                  String    @id @default(uuid()) @db.Uuid
+  conversationId      String    @map("conversation_id") @db.Uuid
+  code                String    @unique
+  createdById         String    @map("created_by_id") @db.Uuid
+  isPrimary           Boolean   @default(false) @map("is_primary")
+  name                String?
+  expiresAt           DateTime? @map("expires_at")
+  maxUses             Int?      @map("max_uses")
+  useCount            Int       @default(0) @map("use_count")
+  createsJoinRequest  Boolean   @default(false) @map("creates_join_request")
+  revokedAt           DateTime? @map("revoked_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  conversation        Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("invite_links")
+}
+
+model JoinRequest {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([conversationId, userId])
+  @@map("join_requests")
+}
+
+model GroupBan {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  bannedById     String    @map("banned_by_id") @db.Uuid
+  reason         String?
+  until          DateTime?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("group_bans")
+}
+
+model Topic {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @map("conversation_id") @db.Uuid
+  title          String
+  order          Int      @default(0)
+  isClosed       Boolean  @default(false) @map("is_closed")
+  createdAt      DateTime @default(now()) @map("created_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messages       Message[]
+
+  @@index([conversationId, order])
+  @@map("topics")
+}
+
+model Poll {
+  id            String       @id @default(uuid()) @db.Uuid
+  messageId     String       @unique @map("message_id") @db.Uuid
+  question      String
+  isAnonymous   Boolean      @default(true) @map("is_anonymous")
+  isQuiz        Boolean      @default(false) @map("is_quiz")
+  allowsMultiple Boolean     @default(false) @map("allows_multiple")
+  closedAt      DateTime?    @map("closed_at")
+  message       Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  options       PollOption[]
+
+  @@map("polls")
+}
+
+model PollOption {
+  id         String     @id @default(uuid()) @db.Uuid
+  pollId     String     @map("poll_id") @db.Uuid
+  text       String
+  order      Int
+  isCorrect  Boolean    @default(false) @map("is_correct")
+  poll       Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes      PollVote[]
+
+  @@index([pollId])
+  @@map("poll_options")
+}
+
+model PollVote {
+  id       String     @id @default(uuid()) @db.Uuid
+  optionId String     @map("option_id") @db.Uuid
+  userId   String     @map("user_id") @db.Uuid
+  votedAt  DateTime   @default(now()) @map("voted_at")
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, userId])
+  @@map("poll_votes")
+}
+
+model DevicePushToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  sessionId  String?  @map("session_id") @db.Uuid
+  platform   String
+  token      String   @unique
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeenAt DateTime @map("last_seen_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_push_tokens")
+}
+
+model CallSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  type           String
+  conversationId String?   @map("conversation_id") @db.Uuid
+  initiatorId    String    @map("initiator_id") @db.Uuid
+  status         String
+  startedAt      DateTime? @map("started_at")
+  endedAt        DateTime? @map("ended_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([initiatorId, createdAt])
+  @@map("call_sessions")
+}
+
+model StickerPack {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String
+  shortName String    @unique @map("short_name")
+  createdAt DateTime  @default(now()) @map("created_at")
+  stickers  Sticker[]
+
+  @@map("sticker_packs")
+}
+
+model Sticker {
+  id       String      @id @default(uuid()) @db.Uuid
+  packId   String      @map("pack_id") @db.Uuid
+  emoji    String?
+  fileUrl  String      @map("file_url")
+  pack     StickerPack @relation(fields: [packId], references: [id], onDelete: Cascade)
+
+  @@index([packId])
+  @@map("stickers")
+}
+
+model OutboxEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  type        String
+  payload     Json
+  createdAt   DateTime  @default(now()) @map("created_at")
+  publishedAt DateTime? @map("published_at")
+
+  @@index([publishedAt, createdAt])
+  @@map("outbox_events")
+}

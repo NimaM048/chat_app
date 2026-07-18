@@ -1,0 +1,491 @@
+# Chat Application Engineering Rule
+
+## Objective
+
+Build a production-grade, enterprise-level real-time chat application that demonstrates senior backend engineering practices. The primary goal is code quality, architecture, scalability, maintainability, and developer experience—not just feature completion.
+
+The project should be resume-worthy and reflect how modern SaaS companies build messaging systems.
+
+---
+
+# Tech Stack
+
+## Backend
+
+* NestJS (latest stable)
+* TypeScript (strict mode)
+* PostgreSQL
+* Prisma ORM
+* Redis
+* RabbitMQ
+* WebSocket (Socket.IO unless native WS provides a clear benefit)
+* JWT Authentication
+* BullMQ
+* Docker
+* Swagger
+* Jest
+
+## Frontend
+
+* React
+* TypeScript
+* Vite
+* TailwindCSS
+* shadcn/ui
+* Zustand
+* TanStack Query
+* React Router
+* Framer Motion
+
+---
+
+# Development Philosophy
+
+Always prefer:
+
+* Readability
+* Maintainability
+* Scalability
+* Simplicity
+* SOLID Principles
+* Clean Architecture
+* Feature-based architecture
+* Strong typing
+* Explicit code
+* Production-ready implementations
+
+Never write code that is only suitable for demos.
+
+Every implementation should be deployable to production.
+
+---
+
+# Architecture
+
+Backend must follow Feature-Based Modular Architecture.
+
+Example:
+
+src/
+
+auth/
+
+chat/
+
+message/
+
+conversation/
+
+user/
+
+presence/
+
+notification/
+
+upload/
+
+common/
+
+config/
+
+database/
+
+Each feature owns:
+
+* controller
+* service
+* repository
+* dto
+* entities
+* websocket gateway
+* validators
+* tests
+
+Avoid God classes.
+
+Avoid shared utility dumping.
+
+---
+
+# Database
+
+Use PostgreSQL.
+
+Use Prisma.
+
+Requirements:
+
+* Proper normalization
+* Foreign keys
+* Indexes
+* Composite indexes
+* Pagination-friendly schema
+* Soft delete only when necessary
+* UUID identifiers
+* createdAt
+* updatedAt
+
+Always think about future scaling.
+
+---
+
+# API Design
+
+Follow REST conventions.
+
+Use:
+
+GET
+
+POST
+
+PATCH
+
+DELETE
+
+Avoid unnecessary endpoints.
+
+Responses must be consistent.
+
+Create reusable response models.
+
+Use validation everywhere.
+
+---
+
+# Authentication
+
+Use JWT Access Token
+
+Refresh Token
+
+Password hashing using Argon2
+
+Role-based authorization
+
+Permission Guards
+
+Never store plain passwords.
+
+---
+
+# Real-Time Communication
+
+Use WebSocket.
+
+The system must support:
+
+Private Chat
+
+Group Chat
+
+Typing Indicator
+
+Online Status
+
+Read Receipts
+
+Message Delivered
+
+Reconnect
+
+Heartbeat
+
+Automatic reconnection
+
+Connection recovery
+
+Avoid polling whenever possible.
+
+---
+
+# Redis Usage
+
+Use Redis for:
+
+Presence
+
+Caching
+
+Session storage
+
+Rate limiting
+
+Pub/Sub
+
+Never use Redis as the primary database.
+
+---
+
+# RabbitMQ
+
+Use RabbitMQ for:
+
+Notifications
+
+Email
+
+Background processing
+
+Heavy async tasks
+
+Retry logic
+
+Dead Letter Queue where appropriate.
+
+---
+
+# Background Jobs
+
+Use BullMQ.
+
+Jobs must be:
+
+Retryable
+
+Observable
+
+Idempotent
+
+Avoid blocking HTTP requests.
+
+---
+
+# Error Handling
+
+Use global exception filters.
+
+Return consistent error responses.
+
+Never expose internal exceptions.
+
+Use meaningful messages.
+
+---
+
+# Logging
+
+Implement structured logging.
+
+Log:
+
+Request ID
+
+User ID
+
+Execution time
+
+Errors
+
+Warnings
+
+Never use console.log in production code.
+
+---
+
+# Security
+
+Validate all input.
+
+Sanitize user data.
+
+Enable CORS properly.
+
+Protect against:
+
+XSS
+
+CSRF (where applicable)
+
+Rate limiting
+
+Brute force
+
+JWT abuse
+
+SQL Injection
+
+Use parameterized queries only.
+
+---
+
+# Frontend
+
+Use Feature-Based Architecture.
+
+Avoid massive components.
+
+Prefer reusable UI.
+
+Every page should be responsive.
+
+Dark Mode required.
+
+Animations should be subtle.
+
+Use shadcn/ui whenever possible.
+
+Keep UI modern and minimal.
+
+Design inspiration:
+
+Telegram
+
+Discord
+
+Linear
+
+Notion
+
+---
+
+# State Management
+
+Global State:
+
+Zustand
+
+Server State:
+
+TanStack Query
+
+Avoid unnecessary global state.
+
+---
+
+# Code Quality
+
+Always:
+
+Use strict TypeScript.
+
+Use interfaces appropriately.
+
+Prefer composition over inheritance.
+
+Keep functions small.
+
+Avoid duplicate logic.
+
+Refactor when duplication appears.
+
+---
+
+# Testing
+
+Write tests for:
+
+Services
+
+Controllers
+
+Repositories
+
+WebSocket logic
+
+Critical business rules
+
+Never ignore failing tests.
+
+---
+
+# Documentation
+
+Generate Swagger documentation.
+
+Every endpoint must include:
+
+Description
+
+Request DTO
+
+Response DTO
+
+Error responses
+
+Examples when useful.
+
+---
+
+# Performance
+
+Optimize for:
+
+Low latency
+
+Horizontal scaling
+
+Minimal database queries
+
+Redis caching
+
+Pagination
+
+Batch operations
+
+Avoid N+1 queries.
+
+Avoid unnecessary allocations.
+
+---
+
+# Docker
+
+Provide:
+
+Dockerfile
+
+docker-compose.yml
+
+Health checks
+
+Environment variables
+
+Production-ready configuration
+
+---
+
+# Git
+
+Write meaningful commit messages.
+
+Keep pull requests focused.
+
+Avoid unrelated changes.
+
+---
+
+# UI/UX Expectations
+
+The application should visually resemble modern messaging platforms.
+
+Key expectations:
+
+* Smooth transitions
+* Responsive layout
+* Beautiful typography
+* Consistent spacing
+* Accessible components
+* Keyboard shortcuts where appropriate
+* Loading skeletons
+* Optimistic UI updates
+* Toast notifications
+* Infinite scrolling
+* Lazy loading
+
+---
+
+# General Rules for Cursor
+
+Before generating code:
+
+1. Understand the existing architecture.
+2. Reuse existing abstractions.
+3. Do not introduce unnecessary dependencies.
+4. Explain architectural trade-offs when multiple solutions exist.
+5. Keep implementations production-ready.
+6. Follow existing naming conventions.
+7. Never sacrifice maintainability for shorter code.
+8. Prefer explicit code over clever code.
+9. Think as a Senior Software Engineer.
+10. Every generated code should be suitable for a real-world enterprise application.

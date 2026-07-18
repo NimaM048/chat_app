@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Vazirmatn:wght@400;500;700&display=swap');
+@import 'tailwindcss';
+
+/* Telegram Web / Desktop token set */
+:root {
+  color-scheme: light;
+  --font-ui: 'Roboto', 'Vazirmatn', system-ui, -apple-system, sans-serif;
+  --app-bg: #ffffff;
+  --sidebar-bg: #ffffff;
+  --chat-bg: #91a3b5;
+  --surface-1: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #ebedf0;
+  --text-primary: #000000;
+  --text-secondary: #707579;
+  --text-muted: #8d969c;
+  --border: #dfe1e5;
+  --accent: #3390ec;
+  --accent-hover: #1e7bd8;
+  --accent-soft: #e7f3ff;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --bubble-own: #eeffde;
+  --bubble-own-text: #000000;
+  --bubble-other: #ffffff;
+  --bubble-shadow: 0 1px 2px rgba(16, 35, 47, 0.12);
+  --online: #0ac630;
+  --danger: #e53935;
+  --composer-height: 54px;
+  --sidebar-width: 420px;
+  --chat-active: #f4f4f5;
+  --chat-hover: #f7f7f8;
+  --header-height: 56px;
+  --unread-badge: #3390ec;
+  --date-chip-bg: rgba(0, 0, 0, 0.2);
+  --date-chip-fg: #ffffff;
+}
+
+.dark {
+  color-scheme: dark;
+  --app-bg: #0e1621;
+  --sidebar-bg: #17212b;
+  --chat-bg: #0e1621;
+  --surface-1: #17212b;
+  --surface-2: #232e3c;
+  --surface-3: #2b3847;
+  --text-primary: #f5f5f5;
+  --text-secondary: #708499;
+  --text-muted: #6d7f8f;
+  --border: #0f1822;
+  --accent: #2aabee;
+  --accent-hover: #1f96d4;
+  --accent-soft: #1a2a38;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --bubble-own: #2b5278;
+  --bubble-own-text: #ffffff;
+  --bubble-other: #182533;
+  --bubble-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --online: #0ac630;
+  --danger: #e53935;
+  --chat-active: #2b5278;
+  --chat-hover: #202b36;
+  --unread-badge: #3e88ce;
+  --date-chip-bg: rgba(0, 0, 0, 0.35);
+  --date-chip-fg: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  letter-spacing: 0;
+  background: var(--app-bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+/* Dense Telegram-style wallpaper doodles */
+.telegram-pattern {
+  background-color: var(--chat-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='%23ffffff' fill-opacity='0.14'%3E%3Ccircle cx='24' cy='32' r='3'/%3E%3Ccircle cx='78' cy='18' r='2'/%3E%3Ccircle cx='132' cy='44' r='2.5'/%3E%3Ccircle cx='190' cy='22' r='2'/%3E%3Ccircle cx='236' cy='48' r='3'/%3E%3Cpath d='M40 90c8 0 12-6 12-12s-4-12-12-12-12 6-12 12 4 12 12 12zm70 36c6 0 10-5 10-10s-4-10-10-10-10 5-10 10 4 10 10 10zm-48 58c5 0 8-4 8-8s-3-8-8-8-8 4-8 8 3 8 8 8zm120-70c7 0 11-5 11-11s-4-11-11-11-11 5-11 11 4 11 11 11z'/%3E%3Cpath d='M58 160l8-4 2 8-8 3zm96-48l10-2 1 9-9 3zm-20 78l7 5-4 7-7-4zm74-20l6-6 6 6-6 5z'/%3E%3Cpath d='M110 200c10 2 18-8 14-16s-16-8-20 0 0 15 6 16zm80-110c8 4 6 16-4 18s-16-8-10-16 8-5 14-2z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 260px 260px;
+}
+
+.dark .telegram-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='%23ffffff' fill-opacity='0.045'%3E%3Ccircle cx='24' cy='32' r='3'/%3E%3Ccircle cx='78' cy='18' r='2'/%3E%3Ccircle cx='132' cy='44' r='2.5'/%3E%3Ccircle cx='190' cy='22' r='2'/%3E%3Ccircle cx='236' cy='48' r='3'/%3E%3Cpath d='M40 90c8 0 12-6 12-12s-4-12-12-12-12 6-12 12 4 12 12 12zm70 36c6 0 10-5 10-10s-4-10-10-10-10 5-10 10 4 10 10 10zm-48 58c5 0 8-4 8-8s-3-8-8-8-8 4-8 8 3 8 8 8zm120-70c7 0 11-5 11-11s-4-11-11-11-11 5-11 11 4 11 11 11z'/%3E%3Cpath d='M58 160l8-4 2 8-8 3zm96-48l10-2 1 9-9 3zm-20 78l7 5-4 7-7-4zm74-20l6-6 6 6-6 5z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.voice-wave {
+  background: linear-gradient(
+    90deg,
+    currentColor 0 8%,
+    transparent 8% 12%,
+    currentColor 12% 16%,
+    transparent 16% 22%,
+    currentColor 22% 28%,
+    transparent 28% 34%,
+    currentColor 34% 48%,
+    transparent 48% 54%,
+    currentColor 54% 62%,
+    transparent 62% 70%,
+    currentColor 70% 82%,
+    transparent 82% 88%,
+    currentColor 88% 100%
+  );
+  opacity: 0.55;
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.typing-dots span {
+  animation: typingPulse 1.2s infinite ease-in-out;
+  opacity: 0.35;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typingPulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+.chat-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
+}
+
+.dark .chat-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Solid Telegram headers — no glass */
+.glass-header {
+  background: var(--sidebar-bg);
+}
+
+.date-chip {
+  background: var(--date-chip-bg);
+  color: var(--date-chip-fg);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* Telegram bubble tails */
+.tg-bubble {
+  position: relative;
+  box-shadow: var(--bubble-shadow);
+}
+
+.tg-bubble-own {
+  border-radius: 14px 14px 4px 14px;
+}
+
+.tg-bubble-other {
+  border-radius: 14px 14px 14px 4px;
+}
+
+.tg-composer-input {
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: var(--surface-2);
+}
+
+.tg-composer-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.message-text {
+  font-size: var(--chat-font-size, 15px);
+  line-height: 1.35;
+}
