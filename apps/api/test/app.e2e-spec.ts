@@ -1,9 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
+
+import { HttpExceptionFilter } from '../src/shared/filters/http-exception.filter';
+
 import { AppModule } from './../src/app.module';
-import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
 
 describe('Health (e2e)', () => {
   let app: INestApplication<App>;
@@ -30,7 +32,7 @@ describe('Health (e2e)', () => {
     return request(app.getHttpServer())
       .get('/api/health')
       .expect(200)
-      .expect((response) => {
+      .expect((response: { body: { success: boolean } }) => {
         expect(response.body.success).toBe(true);
       });
   });

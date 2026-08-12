@@ -1,15 +1,16 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { AppConfigModule } from './config/config.module';
+
+import { AppConfigModule } from './configs';
 import { PrismaModule } from './database/prisma.module';
-import { AuthModule } from './auth/auth.module';
-import { UserModule } from './user/user.module';
-import { RateLimitModule } from './rate-limit/rate-limit.module';
-import { ChatModule } from './chat/chat.module';
-import { UploadModule } from './upload/upload.module';
-import { HealthController } from './health/health.controller';
-import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { AuthModule } from './modules/auth/auth.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { HealthModule } from './modules/health/health.module';
+import { RateLimitModule } from './modules/rate-limit/rate-limit.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { UserModule } from './modules/user/user.module';
+import { LoggingInterceptor } from './shared/interceptors/logging.interceptor';
+import { RequestIdMiddleware } from './shared/middleware/request-id.middleware';
 
 @Module({
   imports: [
@@ -20,8 +21,8 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
     AuthModule,
     ChatModule,
     UploadModule,
+    HealthModule,
   ],
-  controllers: [HealthController],
   providers: [
     {
       provide: APP_INTERCEPTOR,
